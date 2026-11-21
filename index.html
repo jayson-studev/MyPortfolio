@@ -1,0 +1,528 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta
+        name="description"
+        content="Computer Engineering student portfolio featuring embedded systems, electronics, and programming projects."
+    >
+
+    <title>My Portfolio | Computer Engineering</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- =========================
+         NAVIGATION BAR
+    ========================== -->
+    <header class="header">
+        <nav class="nav container" aria-label="Main navigation">
+
+            <a class="logo" href="#home">
+                PJV<span>.</span>
+            </a>
+
+            <button
+                class="menu-toggle"
+                aria-label="Toggle navigation"
+                aria-expanded="false"
+            >
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+
+            <div class="nav-links">
+                <a href="#home">Home</a>
+                <a href="#about">About</a>
+                <a href="#projects">Projects</a>
+                <a href="#skills">Skills</a>
+                <a href="#contact" class="nav-contact">Contact</a>
+            </div>
+
+        </nav>
+    </header>
+
+    <!-- =========================
+         MAIN CONTENT
+    ========================== -->
+    <main>
+
+        <!-- =========================
+             HERO SECTION
+        ========================== -->
+        <section class="hero container" id="home">
+
+            <div class="hero-content">
+
+                <p class="eyebrow">
+                    <span class="dot"></span>
+                    COMPUTER ENGINEERING
+                </p>
+
+                <h1>
+                    Hi, I'm
+                    <span class="accent">Peter Jayson Velasco</span>.
+                </h1>
+
+                <h2>
+                    I build practical solutions with hardware and software.
+                </h2>
+
+                <p class="intro">
+                    A Computer Engineering student interested in embedded
+                    systems, electronics, programming, and technology that
+                    solves real-world problems.
+                </p>
+
+                <div class="hero-actions">
+
+                    <a href="#projects" class="btn btn-primary">
+                        View My Projects
+                        <span>↗</span>
+                    </a>
+
+                    <a
+                        href="INTERN-RESUME_PETER.pdf"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="btn btn-outline"
+                    >
+                        View Resume
+                    </a>
+
+                </div>
+
+                <div class="hero-meta">
+                    <span>Based in the Philippines</span>
+                    <span class="meta-line"></span>
+                    <span>Open to internship opportunities</span>
+                </div>
+
+            </div>
+
+            <!-- HERO ART -->
+            <div
+                class="hero-art"
+                aria-label="Abstract circuit-inspired illustration"
+            >
+
+                <div class="orbit orbit-one"></div>
+                <div class="orbit orbit-two"></div>
+
+                <div class="chip">
+                    <div class="chip-inner">
+                        C<span>+</span><span class="chip-slash">/</span>
+                    </div>
+                </div>
+
+                <span class="circuit circuit-a"></span>
+                <span class="circuit circuit-b"></span>
+                <span class="circuit circuit-c"></span>
+                <span class="circuit circuit-d"></span>
+
+                <span class="art-label">
+                    BUILD · TEST · IMPROVE
+                </span>
+
+            </div>
+
+        </section>
+
+        <!-- =========================
+             ABOUT SECTION
+        ========================== -->
+        <section class="section container" id="about">
+
+            <div class="section-heading">
+
+                <p class="eyebrow">01 / ABOUT</p>
+
+                <h2>A little about me</h2>
+
+            </div>
+
+            <div class="about-grid">
+
+                <p class="about-lead">
+                    I enjoy turning ideas into working prototypes.
+                </p>
+
+                <div class="about-copy">
+
+                    <p>
+                        I'm a Computer Engineering student who enjoys exploring
+                        both hardware and software. I work with microcontrollers,
+                        sensors, and code to build practical technology projects.
+                    </p>
+
+                    <p>
+                        From wiring and testing electronic components to
+                        developing small applications and dashboards, I like
+                        learning by building, troubleshooting, and improving
+                        each project along the way.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- =========================
+             PROJECTS SECTION
+        ========================== -->
+        <section class="section container" id="projects">
+
+            <div class="section-heading">
+
+                <p class="eyebrow">02 / SELECTED WORK</p>
+
+                <h2>Projects I've built</h2>
+
+                <p class="section-note">
+                    A few projects that reflect my interest in embedded
+                    systems and practical engineering.
+                </p>
+
+            </div>
+
+            <div class="projects-grid">
+
+                <!-- PROJECT 1: TACTICAL VANGUARD -->
+                <article class="project-card">
+
+                    <div class="project-image">
+
+                        <img
+                            src="assets/tactical-vanguard.svg"
+                            alt="Illustration of a LoRa communication node and dashboard"
+                            loading="lazy"
+                        >
+
+                        <span class="project-number">01</span>
+
+                    </div>
+
+                    <div class="project-body">
+
+                        <div class="project-title-row">
+
+                            <h3>Tactical Vanguard</h3>
+
+                            <span class="project-type">
+                                COMMUNICATION
+                            </span>
+
+                        </div>
+
+                        <p>
+                            Developed a portable communication system using
+                            ESP32, LoRa, and GPS to send messages and location
+                            data in areas with limited network coverage.
+                            Integrated an OLED display and AES-GCM encryption,
+                            and created a local dashboard for GPS locations,
+                            RSSI, SOS alerts, and communication logs.
+                        </p>
+
+                        <div class="tags">
+                            <span>ESP32</span>
+                            <span>LoRa</span>
+                            <span>GPS</span>
+                            <span>OLED</span>
+                            <span>AES-GCM</span>
+                            <span>Web Dashboard</span>
+                        </div>
+
+                        <a class="project-link" href="#contact">
+                            Project details
+                            <span>↗</span>
+                        </a>
+
+                    </div>
+
+                </article>
+
+                <!-- PROJECT 2: SMART TRAFFIC LIGHT -->
+                <article class="project-card">
+
+                    <div class="project-image">
+
+                        <img
+                            src="assets/traffic-light.svg"
+                            alt="Illustration of an Arduino smart traffic light system"
+                            loading="lazy"
+                        >
+
+                        <span class="project-number">02</span>
+
+                    </div>
+
+                    <div class="project-body">
+
+                        <div class="project-title-row">
+
+                            <h3>Smart Traffic Light System</h3>
+
+                            <span class="project-type">
+                                AUTOMATION
+                            </span>
+
+                        </div>
+
+                        <p>
+                            Built an Arduino-based traffic light system using
+                            Hall Effect sensors for emergency vehicle detection
+                            and priority signaling. Connected IR sensors,
+                            traffic lights, and buzzers to detect stop-line
+                            violations and manage traffic signals.
+                        </p>
+
+                        <div class="tags">
+                            <span>Arduino</span>
+                            <span>Hall Effect</span>
+                            <span>IR Sensors</span>
+                            <span>LEDs</span>
+                            <span>C/C++</span>
+                        </div>
+
+                        <a class="project-link" href="#contact">
+                            Project details
+                            <span>↗</span>
+                        </a>
+
+                    </div>
+
+                </article>
+
+                <!-- PROJECT 3: SMART GROCERY SHELVES -->
+                <article class="project-card">
+
+                    <div class="project-image">
+
+                        <img
+                            src="assets/smart-shelves.svg"
+                            alt="Illustration of smart grocery shelves with RFID tags"
+                            loading="lazy"
+                        >
+
+                        <span class="project-number">03</span>
+
+                    </div>
+
+                    <div class="project-body">
+
+                        <div class="project-title-row">
+
+                            <h3>Smart Grocery Shelves</h3>
+
+                            <span class="project-type">
+                                IOT / INVENTORY
+                            </span>
+
+                        </div>
+
+                        <p>
+                            Built a smart shelf system using ESP32 and RFID
+                            modules to identify products and monitor inventory
+                            changes. Integrated RFID tags and readers to track
+                            products and update inventory information.
+                        </p>
+
+                        <div class="tags">
+                            <span>ESP32</span>
+                            <span>RFID</span>
+                            <span>Embedded Systems</span>
+                            <span>C/C++</span>
+                        </div>
+
+                        <a class="project-link" href="#contact">
+                            Project details
+                            <span>↗</span>
+                        </a>
+
+                    </div>
+
+                </article>
+
+            </div>
+
+        </section>
+
+        <!-- =========================
+             SKILLS SECTION
+        ========================== -->
+        <section class="section container" id="skills">
+
+            <div class="section-heading">
+
+                <p class="eyebrow">03 / TOOLKIT</p>
+
+                <h2>Skills & technologies</h2>
+
+                <p class="section-note">
+                    Tools and technologies I've worked with through coursework
+                    and projects.
+                </p>
+
+            </div>
+
+            <div class="skills-grid">
+
+                <!-- PROGRAMMING -->
+                <div class="skill-card">
+
+                    <h3>
+                        <span class="skill-icon">⌘</span>
+                        Programming
+                    </h3>
+
+                    <div class="tags">
+                        <span>C/C++</span>
+                        <span>HTML</span>
+                        <span>CSS</span>
+                        <span>JavaScript</span>
+                    </div>
+
+                </div>
+
+                <!-- HARDWARE -->
+                <div class="skill-card">
+
+                    <h3>
+                        <span class="skill-icon">⌁</span>
+                        Hardware & Embedded
+                    </h3>
+
+                    <div class="tags">
+                        <span>Arduino</span>
+                        <span>ESP32</span>
+                        <span>Microcontrollers</span>
+                        <span>Sensor Integration</span>
+                        <span>RFID</span>
+                        <span>GPS</span>
+                        <span>LoRa Communication</span>
+                        <span>Circuit Prototyping</span>
+                    </div>
+
+                </div>
+
+                <!-- OTHER TECHNICAL SKILLS -->
+                <div class="skill-card">
+
+                    <h3>
+                        <span class="skill-icon">◈</span>
+                        Other Technical Skills
+                    </h3>
+
+                    <div class="tags">
+                        <span>IoT Development</span>
+                        <span>Hardware & Software Integration</span>
+                        <span>Troubleshooting</span>
+                        <span>Dashboard Development</span>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- =========================
+             CONTACT SECTION
+        ========================== -->
+        <section class="section contact-section container" id="contact">
+
+            <div class="contact-box">
+
+                <div>
+
+                    <p class="eyebrow">04 / CONTACT</p>
+
+                    <h2>Let's connect.</h2>
+
+                    <p>
+                        I'm open to internship opportunities and projects
+                        where I can learn, contribute, and gain hands-on
+                        experience. Feel free to reach out.
+                    </p>
+
+                </div>
+
+                <div class="contact-links">
+
+                    <!-- EMAIL -->
+                    <a
+                        href="mailto:jaysonvelasco084@gmail.com"
+                        class="contact-item"
+                    >
+                        <span>Email</span>
+                        <strong>jaysonvelasco084@gmail.com ↗</strong>
+                    </a>
+
+                    <!-- LINKEDIN -->
+                    <a
+                        href="http://www.linkedin.com/in/peter-jayson-velasco"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="contact-item"
+                    >
+                        <span>LinkedIn</span>
+                        <strong>http://www.linkedin.com/in/peter-jayson-velasco ↗</strong>
+                    </a>
+
+                    <!-- GITHUB -->
+                    <a
+                        href="https://github.com/jayson-studev"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="contact-item"
+                    >
+                        <span>GitHub</span>
+                        <strong>https://github.com/jayson-studev ↗</strong>
+                    </a>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- =========================
+         FOOTER
+    ========================== -->
+    <footer class="footer">
+
+        <div class="container footer-content">
+
+            <a class="logo" href="#home">
+                Peter Jayson Velasco<span>.</span>
+            </a>
+
+            <p>
+                Built with HTML, CSS & JavaScript.
+            </p>
+
+            <p>
+                © <span id="year"></span> Peter Jayson Velasco.
+                All rights reserved.
+            </p>
+
+        </div>
+
+    </footer>
+
+    <!-- =========================
+         JAVASCRIPT
+    ========================== -->
+    <script src="script.js"></script>
+
+</body>
+</html>
