@@ -196,9 +196,8 @@ h1 .accent {
     transform: translateY(-2px);
 }
 
-.btn btn-primary {
+.btn-primary {
     background-color: var(--blue);
-    color: rgb(0,0,0);
 }
 
 .btn-primary:hover {
@@ -208,7 +207,7 @@ h1 .accent {
 .btn-outline {
     border: 1px solid var(--border);
     background: transparent;
-    background-color: var(--blue2);
+    background-color: var(--blue);
 }
 
 .btn-outline:hover {
