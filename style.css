@@ -198,7 +198,7 @@ h1 .accent {
 
 .btn-primary {
     background: var(--blue);
-    color: #08111d;
+    color: rgb(0,0,0);
 }
 
 .btn-primary:hover {
