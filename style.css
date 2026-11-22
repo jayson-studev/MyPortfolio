@@ -196,7 +196,7 @@ h1 .accent {
     transform: translateY(-2px);
 }
 
-.btn-primary {
+.btn btn-primary {
     background-color: var(--blue);
     color: rgb(0,0,0);
 }
