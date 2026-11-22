@@ -963,3 +963,51 @@ h1 .accent {
         font-size: 0.75rem;
     }
 }
+
+/* =========================
+   CODE VIEWER IMPROVEMENTS
+========================= */
+
+.view-code-btn {
+    color: var(--text);
+    cursor: pointer;
+}
+
+.view-code-btn span {
+    color: var(--blue2);
+}
+
+.view-code-btn:hover {
+    background: rgba(91, 156, 255, 0.08);
+    border-color: var(--blue);
+}
+
+/* Keep modal content within the screen */
+.code-modal-content {
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+/* Improve code scrolling */
+.code-window pre {
+    max-height: 55vh;
+    overflow: auto;
+}
+
+/* Better mobile modal sizing */
+@media (max-width: 600px) {
+
+    .code-modal {
+        padding: 10px;
+    }
+
+    .code-modal-content {
+        width: 100%;
+        max-height: 95vh;
+    }
+
+    .code-window pre {
+        max-height: 55vh;
+        font-size: 0.75rem;
+    }
+}
