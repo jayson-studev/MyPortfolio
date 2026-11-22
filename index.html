@@ -524,12 +524,454 @@
     ========================== -->
     <script src="script.js"></script>
 
-<!-- Tactical Vanguard Source Code -->
-<script type="text/plain" id="tactical-code">
-/*
-    Insert your Smart Traffic Light System
-    Arduino source code here.
-*/
+<!-- Tactical Vanguard: Soldier Node -->
+<script type="text/plain" id="soldier-code">
+
+#include <SPI.h>
+#include <LoRa.h>
+#include <TinyGPSPlus.h>
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include <Preferences.h>
+#include <mbedtls/gcm.h>
+
+const uint8_t AES_KEY[16] = {
+  0x31, 0x72, 0xA4, 0x09, 0xB6, 0xC3, 0x55, 0xE8,
+  0x10, 0x2D, 0x7F, 0x91, 0x43, 0xAC, 0x68, 0xD0
+};
+
+#define GPS_RX 16
+#define GPS_TX 17
+#define SOS_BUTTON 32
+
+#define LORA_SCK 18
+#define LORA_MISO 19
+#define LORA_MOSI 23
+#define LORA_SS 5
+#define LORA_RST 14
+#define LORA_DIO0 26
+
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+
+HardwareSerial gpsSerial(2);
+TinyGPSPlus gps;
+Preferences prefs;
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+
+uint64_t counter = 0;
+unsigned long lastSend = 0;
+unsigned long lastDisplay = 0;
+
+bool buttonLastReading = HIGH;
+bool buttonStableState = HIGH;
+unsigned long lastDebounce = 0;
+
+char lastStatus[20] = "STARTING";
+
+void put32(uint8_t *p, uint32_t v) {
+  p[0] = v >> 24;
+  p[1] = v >> 16;
+  p[2] = v >> 8;
+  p[3] = v;
+}
+
+void put64(uint8_t *p, uint64_t v) {
+  for (int i = 7; i >= 0; i--) {
+    p[i] = v & 0xFF;
+    v >>= 8;
+  }
+}
+
+bool gpsHasFix() {
+  return gps.location.isValid() &&
+         gps.location.age() < 3000;
+}
+
+void showDisplay() {
+  if (millis() - lastDisplay < 500) return;
+  lastDisplay = millis();
+
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 0);
+  display.println("TACTICAL VANGUARD");
+  display.println("----------------");
+
+  display.print("GPS: ");
+  display.println(gpsHasFix() ? "FIXED" : "NO FIX");
+
+  if (gpsHasFix()) {
+    display.print("LAT:");
+    display.println(gps.location.lat(), 6);
+    display.print("LON:");
+    display.println(gps.location.lng(), 6);
+  }
+
+  display.print("STATUS: ");
+  display.println(lastStatus);
+  display.display();
+}
+
+bool sendEncrypted(const char *status) {
+  char plain[180];
+
+  if (gpsHasFix()) {
+    snprintf(plain, sizeof(plain),
+      "ID=SOLDIER01,LAT=%.6f,LON=%.6f,GPS=FIXED,STATUS=%s",
+      gps.location.lat(), gps.location.lng(), status);
+  } else {
+    snprintf(plain, sizeof(plain),
+      "ID=SOLDIER01,LAT=NA,LON=NA,GPS=NO_FIX,STATUS=%s",
+      status);
+  }
+
+  size_t plen = strlen(plain);
+  if (plen > 180) return false;
+
+  // Reserve a unique counter before using it.
+  if (counter == UINT64_MAX) {
+    Serial.println("Counter exhausted!");
+    return false;
+  }
+
+  uint64_t nextCounter = counter + 1;
+  prefs.putULong64("counter", nextCounter);
+  counter = nextCounter;
+
+  uint8_t packet[12 + 180 + 16];
+  uint8_t *header = packet;
+  uint8_t *cipher = packet + 12;
+  uint8_t *tag = cipher + plen;
+
+  // Header: 4-byte sender ID + 8-byte counter.
+  put32(header, 0x534F4C44);
+  put64(header + 4, counter);
+
+  mbedtls_gcm_context ctx;
+  mbedtls_gcm_init(&ctx);
+
+  int rc = mbedtls_gcm_setkey(
+    &ctx, MBEDTLS_CIPHER_ID_AES, AES_KEY, 128);
+
+  if (rc == 0) {
+    rc = mbedtls_gcm_crypt_and_tag(
+      &ctx,
+      MBEDTLS_GCM_ENCRYPT,
+      plen,
+      header, 12,       // 12-byte IV
+      header, 12,       // authenticated header (AAD)
+      (const unsigned char *)plain,
+      cipher,
+      16, tag
+    );
+  }
+
+  mbedtls_gcm_free(&ctx);
+
+  if (rc != 0) {
+    Serial.printf("Encryption failed: %d\n", rc);
+    return false;
+  }
+
+  LoRa.beginPacket();
+  LoRa.write(packet, 12 + plen + 16);
+  int result = LoRa.endPacket();
+
+  if (result == 1) {
+    snprintf(lastStatus, sizeof(lastStatus), "%s", status);
+    Serial.printf("Sent encrypted packet #%llu: %s\n",
+                  (unsigned long long)counter, status);
+    return true;
+  }
+
+  Serial.println("LoRa transmission failed.");
+  return false;
+}
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(SOS_BUTTON, INPUT_PULLUP);
+
+  gpsSerial.begin(9600, SERIAL_8N1, GPS_RX, GPS_TX);
+
+  Wire.begin(21, 22);
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+    Serial.println("OLED initialization failed.");
+  } else {
+    display.clearDisplay();
+    display.display();
+  }
+
+  prefs.begin("tv-sec", false);
+  counter = prefs.getULong64("counter", 0);
+
+  SPI.begin(LORA_SCK, LORA_MISO, LORA_MOSI, LORA_SS);
+  LoRa.setPins(LORA_SS, LORA_RST, LORA_DIO0);
+
+  if (!LoRa.begin(433E6)) {
+    Serial.println("LoRa initialization failed!");
+    while (true) delay(1000);
+  }
+
+  LoRa.setTxPower(17);
+  Serial.println("Soldier Node ready.");
+}
+
+void loop() {
+  while (gpsSerial.available()) {
+    gps.encode(gpsSerial.read());
+  }
+
+  bool reading = digitalRead(SOS_BUTTON);
+
+  if (reading != buttonLastReading) {
+    lastDebounce = millis();
+    buttonLastReading = reading;
+  }
+
+  if (millis() - lastDebounce > 40) {
+    if (reading != buttonStableState) {
+      buttonStableState = reading;
+
+      if (buttonStableState == LOW) {
+        sendEncrypted("SOS");
+      }
+    }
+  }
+
+  if (millis() - lastSend >= 5000) {
+    lastSend = millis();
+    sendEncrypted("NORMAL");
+  }
+
+  showDisplay();
+}
+
+</script>
+
+<!-- Tactical Vanguard: Relay Node -->
+<script type="text/plain" id="relay-code">
+
+#include <SPI.h>
+#include <LoRa.h>
+
+#define LORA_SCK 18
+#define LORA_MISO 19
+#define LORA_MOSI 23
+#define LORA_SS 5
+#define LORA_RST 14
+#define LORA_DIO0 26
+
+uint8_t packet[255];
+
+void setup() {
+  Serial.begin(115200);
+
+  SPI.begin(LORA_SCK, LORA_MISO, LORA_MOSI, LORA_SS);
+  LoRa.setPins(LORA_SS, LORA_RST, LORA_DIO0);
+
+  if (!LoRa.begin(433E6)) {
+    Serial.println("LoRa initialization failed!");
+    while (true) delay(1000);
+  }
+
+  LoRa.setTxPower(17);
+  Serial.println("Encrypted Relay Node ready.");
+  Serial.println("Waiting for packets...");
+}
+
+void loop() {
+  int packetSize = LoRa.parsePacket();
+  if (packetSize <= 0) return;
+
+  if (packetSize > (int)sizeof(packet)) {
+    while (LoRa.available()) LoRa.read();
+    Serial.println("Oversized packet dropped.");
+    return;
+  }
+
+  int len = 0;
+  while (LoRa.available() && len < (int)sizeof(packet)) {
+    packet[len++] = (uint8_t)LoRa.read();
+  }
+
+  if (len < 28) {
+    Serial.println("Invalid short packet dropped.");
+    return;
+  }
+
+  Serial.print("Encrypted packet received: ");
+  Serial.print(len);
+  Serial.print(" bytes | RSSI: ");
+  Serial.println(LoRa.packetRssi());
+
+  // Forward the exact bytes without decrypting or altering them.
+  LoRa.beginPacket();
+  LoRa.write(packet, len);
+  int result = LoRa.endPacket();
+
+  Serial.println(result == 1 ? "FORWARDED" : "FORWARD FAILED");
+}
+
+</script>
+
+<!-- Tactical Vanguard: Command Node -->
+<script type="text/plain" id="command-code">
+
+#include <SPI.h>
+#include <LoRa.h>
+#include <Preferences.h>
+#include <mbedtls/gcm.h>
+
+// Must match the Soldier Node key exactly.
+const uint8_t AES_KEY[16] = {
+  0x31, 0x72, 0xA4, 0x09, 0xB6, 0xC3, 0x55, 0xE8,
+  0x10, 0x2D, 0x7F, 0x91, 0x43, 0xAC, 0x68, 0xD0
+};
+
+#define LORA_SCK 18
+#define LORA_MISO 19
+#define LORA_MOSI 23
+#define LORA_SS 5
+#define LORA_RST 14
+#define LORA_DIO0 26
+
+const uint32_t EXPECTED_SENDER_ID = 0x534F4C44; // "SOLD"
+
+uint8_t packet[255];
+Preferences prefs;
+uint64_t highestCounter = 0;
+
+uint32_t read32(const uint8_t *p) {
+  return ((uint32_t)p[0] << 24) |
+         ((uint32_t)p[1] << 16) |
+         ((uint32_t)p[2] << 8) |
+         (uint32_t)p[3];
+}
+
+uint64_t read64(const uint8_t *p) {
+  uint64_t value = 0;
+  for (int i = 0; i < 8; i++) {
+    value = (value << 8) | p[i];
+  }
+  return value;
+}
+
+void setup() {
+  Serial.begin(115200);
+
+  if (!prefs.begin("tv-cmd", false)) {
+    Serial.println("Replay-counter storage unavailable.");
+    while (true) delay(1000);
+  }
+
+  highestCounter = prefs.getULong64("highest", 0);
+
+  SPI.begin(LORA_SCK, LORA_MISO, LORA_MOSI, LORA_SS);
+  LoRa.setPins(LORA_SS, LORA_RST, LORA_DIO0);
+
+  if (!LoRa.begin(433E6)) {
+    Serial.println("LoRa initialization failed!");
+    while (true) delay(1000);
+  }
+
+  LoRa.setTxPower(17);
+  Serial.println("Encrypted Command Node ready.");
+  Serial.println("Waiting for authenticated packets...");
+}
+
+void loop() {
+  int packetSize = LoRa.parsePacket();
+  if (packetSize <= 0) return;
+
+  if (packetSize > (int)sizeof(packet)) {
+    while (LoRa.available()) LoRa.read();
+    Serial.println("Oversized packet rejected.");
+    return;
+  }
+
+  int len = 0;
+  while (LoRa.available() && len < (int)sizeof(packet)) {
+    packet[len++] = (uint8_t)LoRa.read();
+  }
+
+  // Header: 12 bytes; authentication tag: 16 bytes.
+  if (len < 28) {
+    Serial.println("Rejected: packet too short.");
+    return;
+  }
+
+  const uint8_t *header = packet;
+  const uint8_t *cipher = packet + 12;
+  size_t cipherLen = len - 12 - 16;
+  const uint8_t *tag = packet + len - 16;
+
+  uint32_t sender = read32(header);
+  uint64_t counter = read64(header + 4);
+
+  if (sender != EXPECTED_SENDER_ID || counter == 0) {
+    Serial.println("Rejected: unknown sender or invalid counter.");
+    return;
+  }
+
+  // This single-sender example uses a strictly increasing counter.
+  if (counter <= highestCounter) {
+    Serial.println("Rejected: duplicate or old packet.");
+    return;
+  }
+
+  uint8_t plain[256] = {0};
+
+  mbedtls_gcm_context ctx;
+  mbedtls_gcm_init(&ctx);
+
+  int rc = mbedtls_gcm_setkey(
+    &ctx, MBEDTLS_CIPHER_ID_AES, AES_KEY, 128
+  );
+
+  if (rc == 0) {
+    rc = mbedtls_gcm_auth_decrypt(
+      &ctx,
+      cipherLen,
+      header, 12,   // nonce
+      header, 12,   // authenticated header
+      tag, 16,      // authentication tag
+      cipher,
+      plain
+    );
+  }
+
+  mbedtls_gcm_free(&ctx);
+
+  if (rc != 0) {
+    Serial.println("AUTHENTICATION FAILED: packet rejected.");
+    return;
+  }
+
+  // Save the replay counter only after successful authentication.
+  if (prefs.putULong64("highest", counter) != sizeof(uint64_t)) {
+    Serial.println("Counter storage failed; message not accepted.");
+    return;
+  }
+
+  highestCounter = counter;
+  plain[cipherLen] = '\0';
+
+  Serial.println();
+  Serial.println("=== AUTHENTICATED MESSAGE ===");
+  Serial.print("Counter: ");
+  Serial.println((unsigned long long)counter);
+  Serial.print("RSSI: ");
+  Serial.print(LoRa.packetRssi());
+  Serial.println(" dBm");
+  Serial.print("Decrypted: ");
+  Serial.println((char *)plain);
+  Serial.println("=============================");
+}
+
 </script>
 
 <!-- Smart Traffic Light Source Code -->
@@ -2256,6 +2698,7 @@ void loop() {
 
     <div class="code-modal-content">
 
+        <!-- Modal Header -->
         <div class="code-modal-header">
             <h3 id="code-title">Project Source Code</h3>
 
@@ -2268,14 +2711,42 @@ void loop() {
             </button>
         </div>
 
+        <!-- Tactical Vanguard Node Tabs -->
+        <div class="code-tabs" id="code-tabs">
+
+            <button
+                class="code-tab active"
+                data-node="soldier-code"
+            >
+                Soldier Node
+            </button>
+
+            <button
+                class="code-tab"
+                data-node="relay-code"
+            >
+                Relay Node
+            </button>
+
+            <button
+                class="code-tab"
+                data-node="command-code"
+            >
+                Command Node
+            </button>
+
+        </div>
+
+        <!-- Code Window -->
         <div class="code-window">
 
             <div class="code-window-header">
                 <span class="code-dot red"></span>
                 <span class="code-dot yellow"></span>
                 <span class="code-dot green"></span>
+
                 <span class="code-file-name" id="code-file-name">
-                    source.ino
+                    main.ino
                 </span>
             </div>
 
@@ -2283,6 +2754,7 @@ void loop() {
 
         </div>
 
+        <!-- Copy Code Button -->
         <button class="btn btn-outline" id="copy-code">
             Copy Code
         </button>
