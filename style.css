@@ -971,6 +971,7 @@ h1 .accent {
 .view-code-btn {
     color: var(--text);
     cursor: pointer;
+    background-color: var(--blue2);
 }
 
 .view-code-btn span {
