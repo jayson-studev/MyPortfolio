@@ -213,7 +213,9 @@ h1 .accent {
 .btn-outline:hover {
     border-color: var(--blue2);
 }
-
+.view-project-btn{
+   background-color: var(--blue);
+}
 .hero-meta {
     display: flex;
     gap: 13px;
