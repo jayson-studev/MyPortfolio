@@ -198,21 +198,21 @@ h1 .accent {
 }
 
 .btn-primary {
+    background: transparent;
     background-color: var(--blue);
 }
 
 .btn-primary:hover {
-    background: var(--border);
+    opacity: 0.8;
 }
 
 .btn-outline {
-    border: 1px solid var(--border);
     background: transparent;
     background-color: var(--blue);
 }
 
 .btn-outline:hover {
-    border-color: var(--blue2);
+    border: 1px solid var(--text);
 }
 
 .hero-meta {
