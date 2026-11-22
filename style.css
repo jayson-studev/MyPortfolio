@@ -518,7 +518,6 @@ h1 .accent {
     color: white;
 }
 .view-code-btn {
-    display: none;
     gap: 8px;
     margin-bottom: 16px;
     flex-wrap: wrap;
