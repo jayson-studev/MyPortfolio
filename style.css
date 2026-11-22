@@ -202,7 +202,7 @@ h1 .accent {
 }
 
 .btn-primary:hover {
-    background: var(--blue2);
+    background: var(--border);
 }
 
 .btn-outline {
