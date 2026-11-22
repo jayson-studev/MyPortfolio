@@ -197,7 +197,7 @@ h1 .accent {
 }
 
 .btn-primary {
-    background-color: white;
+    background: var(--border);
     color: rgb(0,0,0);
 }
 
