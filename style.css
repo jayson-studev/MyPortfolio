@@ -518,22 +518,39 @@ h1 .accent {
     color: white;
 }
 .view-code-btn {
-   padding: 12px 18px;
-   border-radius: 9px;
-   font-weight: 700;
-   font-size: 0.9rem;
-   display: inline-flex;
-   gap: 15px
-   align-items: center;
-   transition: transform 0.2s, background 0.2s, border-color 0.2s;
-   border: 1px solid var(--border);
-   background: transparent;
-}
-.view-code-btn: hover{
-   transform: translateY(-2px);
-   border-color: var(--blue);
+    display: none;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
 }
 
+.view-code-btn {
+    padding: 10px 16px;
+
+    background: var(--panel2);
+    color: var(--muted);
+
+    border: 1px solid var(--border);
+    border-radius: 8px;
+
+    font-family: inherit;
+    font-size: 0.85rem;
+
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.view-code-btn.active {
+    display: flex;
+    color: var(--text);
+    background: rgba(91, 156, 255, 0.12);
+    border-color: var(--blue);
+}
+
+.view-code-btn:hover {
+    color: var(--text);
+    border-color: var(--blue);
+}
 
 /* =========================
    SKILLS SECTION
