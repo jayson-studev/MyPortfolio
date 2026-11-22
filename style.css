@@ -765,3 +765,145 @@ h1 .accent {
         line-height: 1.4;
     }
 }
+
+/* =========================
+   CODE VIEWER MODAL
+========================= */
+
+.code-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+
+    display: none;
+    align-items: center;
+    justify-content: center;
+
+    padding: 20px;
+    z-index: 9999;
+}
+
+.code-modal.active {
+    display: flex;
+}
+
+.code-modal-content {
+    width: 100%;
+    max-width: 850px;
+
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+
+    padding: 24px;
+    box-shadow: 0 0 30px rgba(91, 156, 255, 0.15);
+}
+
+.code-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    margin-bottom: 20px;
+}
+
+.code-modal-header h3 {
+    color: var(--text);
+    font-size: 1.2rem;
+}
+
+.close-code {
+    background: transparent;
+    border: none;
+
+    color: var(--muted);
+    font-size: 2rem;
+    cursor: pointer;
+
+    transition: color 0.2s;
+}
+
+.close-code:hover {
+    color: var(--blue);
+}
+
+.code-window {
+    background: #080b10;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+
+    overflow: hidden;
+    margin-bottom: 20px;
+}
+
+.code-window-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    padding: 12px 16px;
+    background: #111720;
+    border-bottom: 1px solid var(--border);
+}
+
+.code-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.code-dot.red {
+    background: #ff5f57;
+}
+
+.code-dot.yellow {
+    background: #febc2e;
+}
+
+.code-dot.green {
+    background: #28c840;
+}
+
+.code-file-name {
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin-left: 8px;
+    font-family: "DM Mono", monospace;
+}
+
+.code-window pre {
+    padding: 20px;
+
+    max-height: 450px;
+    overflow: auto;
+
+    color: #c9d8eb;
+    font-family: "DM Mono", monospace;
+    font-size: 0.85rem;
+    line-height: 1.7;
+
+    white-space: pre;
+}
+
+.code-window code {
+    font-family: inherit;
+}
+
+#copy-code {
+    cursor: pointer;
+}
+
+/* Mobile responsiveness */
+
+@media (max-width: 600px) {
+    .code-modal-content {
+        padding: 16px;
+    }
+
+    .code-window pre {
+        font-size: 0.75rem;
+        max-height: 60vh;
+        padding: 14px;
+    }
+}
