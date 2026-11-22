@@ -239,10 +239,10 @@
                             <span>Web Dashboard</span>
                         </div>
 
-                        <a class="project-link" href="#contact">
-                            Project details
-                            <span>↗</span>
-                        </a>
+                        <button class="btn btn-outline view-code-btn" data-code="tactical-code">
+                            View Source Code
+                            <span>&lt;/&gt;</span>
+                        </button>
 
                     </div>
 
@@ -291,10 +291,10 @@
                             <span>C/C++</span>
                         </div>
 
-                        <a class="project-link" href="#contact">
-                            Project details
-                            <span>↗</span>
-                        </a>
+                        <button class="btn btn-outline view-code-btn" data-code="traffic-code">
+                             View Arduino Code
+                            <span>&lt;/&gt;</span>
+                        </button>
 
                     </div>
 
@@ -341,10 +341,10 @@
                             <span>C/C++</span>
                         </div>
 
-                        <a class="project-link" href="#contact">
-                            Project details
-                            <span>↗</span>
-                        </a>
+                        <button class="btn btn-outline view-code-btn" data-code="shelves-code">
+                            View Source Code
+                            <span>&lt;/&gt;</span>
+                        </button>
 
                     </div>
 
@@ -524,5 +524,68 @@
     ========================== -->
     <script src="script.js"></script>
 
+<!-- Tactical Vanguard Source Code -->
+<script type="text/plain" id="tactical-code">
+/*
+    Insert your Tactical Vanguard
+    ESP32 source code here.
+*/
+</script>
+
+<!-- Smart Traffic Light Source Code -->
+<script type="text/plain" id="traffic-code">
+/*
+    Insert your Smart Traffic Light System
+    Arduino source code here.
+*/
+</script>
+
+<!-- Smart Grocery Shelves Source Code -->
+<script type="text/plain" id="shelves-code">
+/*
+    Insert your Smart Grocery Shelves
+    ESP32 source code here.
+*/
+</script>
+    
+<!-- Code Viewer Modal -->
+<div class="code-modal" id="code-modal">
+
+    <div class="code-modal-content">
+
+        <div class="code-modal-header">
+            <h3 id="code-title">Project Source Code</h3>
+
+            <button
+                class="close-code"
+                id="close-code"
+                aria-label="Close code viewer"
+            >
+                &times;
+            </button>
+        </div>
+
+        <div class="code-window">
+
+            <div class="code-window-header">
+                <span class="code-dot red"></span>
+                <span class="code-dot yellow"></span>
+                <span class="code-dot green"></span>
+                <span class="code-file-name" id="code-file-name">
+                    source.ino
+                </span>
+            </div>
+
+            <pre><code id="code-content"></code></pre>
+
+        </div>
+
+        <button class="btn btn-outline" id="copy-code">
+            Copy Code
+        </button>
+
+    </div>
+
+</div>
 </body>
 </html>
