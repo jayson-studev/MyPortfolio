@@ -527,25 +527,1728 @@
 <!-- Tactical Vanguard Source Code -->
 <script type="text/plain" id="tactical-code">
 /*
-    Insert your Tactical Vanguard
-    ESP32 source code here.
-*/
-</script>
-
-<!-- Smart Traffic Light Source Code -->
-<script type="text/plain" id="traffic-code">
-/*
     Insert your Smart Traffic Light System
     Arduino source code here.
 */
 </script>
 
+<!-- Smart Traffic Light Source Code -->
+<script type="text/plain" id="traffic-code">
+// =====================================================
+// PIN ASSIGNMENT
+// =====================================================
+
+// NORTH + SOUTH
+const int NS_RED = 2;
+const int NS_YELLOW = 3;
+const int NS_GREEN = 4;
+
+// EAST + WEST
+const int EW_RED = 5;
+const int EW_YELLOW = 6;
+const int EW_GREEN = 7;
+
+
+// =====================================================
+// PEDESTRIAN BUZZERS
+// =====================================================
+
+const int BUZZER_NS = 8;
+const int BUZZER_EW = 9;
+
+
+// =====================================================
+// HALL SENSORS
+// =====================================================
+
+const int HALL_NORTH = 10;
+const int HALL_SOUTH = 11;
+const int HALL_EAST = 12;
+const int HALL_WEST = 13;
+
+
+// =====================================================
+// IR SENSORS
+// =====================================================
+
+const int IR_NORTH = A0;
+const int IR_SOUTH = A1;
+const int IR_EAST = A2;
+const int IR_WEST = A3;
+
+
+// =====================================================
+// TIMING
+// =====================================================
+
+const unsigned long GREEN_TIME = 10000UL;
+const unsigned long YELLOW_TIME = 3000UL;
+const unsigned long EMERGENCY_TIME = 5000UL;
+
+
+// =====================================================
+// PHASE ENUM
+// =====================================================
+
+enum Phase
+{
+  NS_GREEN_PHASE,
+  NS_YELLOW_PHASE,
+  EW_GREEN_PHASE,
+  EW_YELLOW_PHASE
+};
+
+
+// =====================================================
+// BEEP STATE
+// =====================================================
+
+struct BeepState
+{
+  bool active;
+  bool state;
+  int count;
+  unsigned long lastTime;
+};
+
+BeepState nsBeep;
+BeepState ewBeep;
+
+
+// =====================================================
+// SETUP
+// =====================================================
+
+void setup()
+{
+  Serial.begin(9600);
+
+
+  // ---------------------------------------------------
+  // TRAFFIC LIGHTS
+  // ---------------------------------------------------
+
+  pinMode(NS_RED, OUTPUT);
+  pinMode(NS_YELLOW, OUTPUT);
+  pinMode(NS_GREEN, OUTPUT);
+
+  pinMode(EW_RED, OUTPUT);
+  pinMode(EW_YELLOW, OUTPUT);
+  pinMode(EW_GREEN, OUTPUT);
+
+
+  // ---------------------------------------------------
+  // BUZZERS
+  // ---------------------------------------------------
+
+  pinMode(BUZZER_NS, OUTPUT);
+  pinMode(BUZZER_EW, OUTPUT);
+
+
+  // ---------------------------------------------------
+  // HALL SENSORS
+  // ---------------------------------------------------
+
+  pinMode(HALL_NORTH, INPUT_PULLUP);
+  pinMode(HALL_SOUTH, INPUT_PULLUP);
+  pinMode(HALL_EAST, INPUT_PULLUP);
+  pinMode(HALL_WEST, INPUT_PULLUP);
+
+
+  // ---------------------------------------------------
+  // IR SENSORS
+  // ---------------------------------------------------
+
+  pinMode(IR_NORTH, INPUT);
+  pinMode(IR_SOUTH, INPUT);
+  pinMode(IR_EAST, INPUT);
+  pinMode(IR_WEST, INPUT);
+
+
+  // ---------------------------------------------------
+  // INITIAL STATE
+  // ---------------------------------------------------
+
+  allLightsOff();
+  stopBuzzers();
+
+
+  Serial.println();
+  Serial.println("====================================");
+  Serial.println(" SMART TRAFFIC LIGHT SYSTEM");
+  Serial.println(" SYSTEM READY");
+  Serial.println("====================================");
+
+  delay(1000);
+}
+
+
+// =====================================================
+// MAIN LOOP
+// =====================================================
+
+void loop()
+{
+  runPhase(NS_GREEN_PHASE, GREEN_TIME);
+
+  runPhase(NS_YELLOW_PHASE, YELLOW_TIME);
+
+  runPhase(EW_GREEN_PHASE, GREEN_TIME);
+
+  runPhase(EW_YELLOW_PHASE, YELLOW_TIME);
+}
+
+
+// =====================================================
+// RUN TRAFFIC PHASE
+// =====================================================
+
+void runPhase(Phase phase, unsigned long duration)
+{
+  unsigned long phaseStart = millis();
+
+
+  // ---------------------------------------------------
+  // SET CORRECT TRAFFIC LIGHT STATE
+  // ---------------------------------------------------
+
+  setPhase(phase);
+
+
+  // ---------------------------------------------------
+  // PEDESTRIAN SIGNAL
+  // ---------------------------------------------------
+
+  stopBuzzers();
+
+
+  if (phase == NS_GREEN_PHASE)
+  {
+    /*
+      NS vehicles GO
+      EW vehicles STOP
+
+      EW pedestrians GO
+    */
+
+    startThreeBeep(BUZZER_EW);
+
+    Serial.println();
+    Serial.println("========== NORMAL TRAFFIC ==========");
+    Serial.println("NORTH  : GREEN");
+    Serial.println("SOUTH  : GREEN");
+    Serial.println("EAST   : RED");
+    Serial.println("WEST   : RED");
+  }
+
+
+  else if (phase == NS_YELLOW_PHASE)
+  {
+    /*
+      NS vehicles WARNING
+      EW vehicles STOP
+    */
+
+    digitalWrite(BUZZER_EW, HIGH);
+
+    Serial.println();
+    Serial.println("========== TRAFFIC WARNING =========");
+    Serial.println("NORTH  : YELLOW");
+    Serial.println("SOUTH  : YELLOW");
+    Serial.println("EAST   : RED");
+    Serial.println("WEST   : RED");
+  }
+
+
+  else if (phase == EW_GREEN_PHASE)
+  {
+    /*
+      EW vehicles GO
+      NS vehicles STOP
+
+      NS pedestrians GO
+    */
+
+    startThreeBeep(BUZZER_NS);
+
+    Serial.println();
+    Serial.println("========== NORMAL TRAFFIC ==========");
+    Serial.println("NORTH  : RED");
+    Serial.println("SOUTH  : RED");
+    Serial.println("EAST   : GREEN");
+    Serial.println("WEST   : GREEN");
+  }
+
+
+  else if (phase == EW_YELLOW_PHASE)
+  {
+    /*
+      EW vehicles WARNING
+      NS vehicles STOP
+    */
+
+    digitalWrite(BUZZER_NS, HIGH);
+
+    Serial.println();
+    Serial.println("========== TRAFFIC WARNING =========");
+    Serial.println("NORTH  : RED");
+    Serial.println("SOUTH  : RED");
+    Serial.println("EAST   : YELLOW");
+    Serial.println("WEST   : YELLOW");
+  }
+
+
+  // ---------------------------------------------------
+  // PHASE TIMER
+  // ---------------------------------------------------
+
+  while (true)
+  {
+    unsigned long elapsed = millis() - phaseStart;
+
+
+    // -------------------------------------------------
+    // UPDATE BUZZERS
+    // -------------------------------------------------
+
+    updateBuzzers();
+
+
+    // -------------------------------------------------
+    // IR VIOLATION
+    // -------------------------------------------------
+
+    checkIR(phase);
+
+
+    // -------------------------------------------------
+    // EMERGENCY CHECK
+    // -------------------------------------------------
+
+    int emergency = checkEmergency(phase);
+
+
+    if (emergency != 0)
+    {
+      /*
+        SAVE THE REMAINING TIME.
+
+        Example:
+
+        GREEN = 10 seconds
+
+        Emergency detected at 7 seconds
+
+        Remaining = 3 seconds
+      */
+
+      unsigned long remaining;
+
+
+      if (elapsed >= duration)
+      {
+        remaining = 0;
+      }
+      else
+      {
+        remaining = duration - elapsed;
+      }
+
+
+      Serial.println();
+      Serial.println();
+      Serial.println("####################################");
+      Serial.println("     EMERGENCY VEHICLE DETECTED");
+      Serial.println("####################################");
+
+
+      printEmergency(emergency);
+
+
+      Serial.print("Elapsed time: ");
+      Serial.print(elapsed);
+      Serial.println(" ms");
+
+
+      Serial.print("Remaining time: ");
+      Serial.print(remaining);
+      Serial.println(" ms");
+
+
+      // ------------------------------------------------
+      // EMERGENCY MODE
+      // ------------------------------------------------
+
+      emergencyMode(emergency);
+
+
+      // ------------------------------------------------
+      // RESTORE ORIGINAL PHASE
+      // ------------------------------------------------
+
+      setPhase(phase);
+
+      stopBuzzers();
+
+
+      /*
+        DO NOT restart 10 seconds.
+
+        Continue only the remaining time.
+      */
+
+      if (phase == NS_YELLOW_PHASE)
+      {
+        digitalWrite(BUZZER_EW, HIGH);
+      }
+
+      else if (phase == EW_YELLOW_PHASE)
+      {
+        digitalWrite(BUZZER_NS, HIGH);
+      }
+
+
+      Serial.println();
+      Serial.println("Returning to normal traffic...");
+      Serial.print("Remaining time: ");
+      Serial.print(remaining);
+      Serial.println(" ms");
+
+
+      unsigned long resumeStart = millis();
+
+
+      while (millis() - resumeStart < remaining)
+      {
+        updateBuzzers();
+
+        checkIR(phase);
+
+        /*
+          Emergency detection is temporarily ignored
+          while finishing the interrupted phase.
+
+          This prevents the same emergency vehicle from
+          immediately triggering another emergency.
+        */
+
+        delay(5);
+      }
+
+
+      stopBuzzers();
+
+      Serial.println("Phase completed.");
+
+      return;
+    }
+
+
+    // -------------------------------------------------
+    // PHASE FINISHED
+    // -------------------------------------------------
+
+    if (elapsed >= duration)
+    {
+      break;
+    }
+
+
+    delay(5);
+  }
+
+
+  stopBuzzers();
+}
+
+
+// =====================================================
+// SET PHASE
+// =====================================================
+
+void setPhase(Phase phase)
+{
+  /*
+    VERY IMPORTANT:
+
+    We turn ALL traffic LEDs OFF first.
+
+    This prevents unwanted combinations such as:
+
+        GREEN + YELLOW
+        GREEN + RED
+        RED + YELLOW
+
+    Only the correct traffic state is then activated.
+  */
+
+  allLightsOff();
+
+
+  // ---------------------------------------------------
+  // NORTH + SOUTH GREEN
+  // ---------------------------------------------------
+
+  if (phase == NS_GREEN_PHASE)
+  {
+    digitalWrite(NS_GREEN, HIGH);
+    digitalWrite(EW_RED, HIGH);
+  }
+
+
+  // ---------------------------------------------------
+  // NORTH + SOUTH YELLOW
+  // ---------------------------------------------------
+
+  else if (phase == NS_YELLOW_PHASE)
+  {
+    digitalWrite(NS_YELLOW, HIGH);
+    digitalWrite(EW_RED, HIGH);
+  }
+
+
+  // ---------------------------------------------------
+  // EAST + WEST GREEN
+  // ---------------------------------------------------
+
+  else if (phase == EW_GREEN_PHASE)
+  {
+    digitalWrite(NS_RED, HIGH);
+    digitalWrite(EW_GREEN, HIGH);
+  }
+
+
+  // ---------------------------------------------------
+  // EAST + WEST YELLOW
+  // ---------------------------------------------------
+
+  else if (phase == EW_YELLOW_PHASE)
+  {
+    digitalWrite(NS_RED, HIGH);
+    digitalWrite(EW_YELLOW, HIGH);
+  }
+}
+
+
+// =====================================================
+// ALL LIGHTS OFF
+// =====================================================
+
+void allLightsOff()
+{
+  digitalWrite(NS_RED, LOW);
+  digitalWrite(NS_YELLOW, LOW);
+  digitalWrite(NS_GREEN, LOW);
+
+  digitalWrite(EW_RED, LOW);
+  digitalWrite(EW_YELLOW, LOW);
+  digitalWrite(EW_GREEN, LOW);
+}
+
+
+// =====================================================
+// EMERGENCY DETECTION
+// =====================================================
+
+int checkEmergency(Phase phase)
+{
+  /*
+    IMPORTANT:
+
+    Emergency is only accepted from the direction
+    that currently has RED.
+  */
+
+
+  // ---------------------------------------------------
+  // NS IS RED
+  // ---------------------------------------------------
+
+  if (phase == EW_GREEN_PHASE ||
+      phase == EW_YELLOW_PHASE)
+  {
+    if (digitalRead(HALL_NORTH) == LOW)
+    {
+      return 1;
+    }
+
+    if (digitalRead(HALL_SOUTH) == LOW)
+    {
+      return 2;
+    }
+  }
+
+
+  // ---------------------------------------------------
+  // EW IS RED
+  // ---------------------------------------------------
+
+  if (phase == NS_GREEN_PHASE ||
+      phase == NS_YELLOW_PHASE)
+  {
+    if (digitalRead(HALL_EAST) == LOW)
+    {
+      return 3;
+    }
+
+    if (digitalRead(HALL_WEST) == LOW)
+    {
+      return 4;
+    }
+  }
+
+
+  return 0;
+}
+
+
+// =====================================================
+// EMERGENCY MODE
+// =====================================================
+
+void emergencyMode(int direction)
+{
+  /*
+    Emergency state:
+
+    NORTH/SOUTH emergency:
+
+        NORTH  = GREEN
+        SOUTH  = GREEN
+        EAST   = RED
+        WEST   = RED
+
+
+    EAST/WEST emergency:
+
+        NORTH  = RED
+        SOUTH  = RED
+        EAST   = GREEN
+        WEST   = GREEN
+
+
+    Duration = 5 seconds
+  */
+
+
+  allLightsOff();
+  stopBuzzers();
+
+
+  // ---------------------------------------------------
+  // NORTH EMERGENCY
+  // ---------------------------------------------------
+
+  if (direction == 1)
+  {
+    Serial.println("EMERGENCY FROM NORTH");
+
+    digitalWrite(NS_GREEN, HIGH);
+    digitalWrite(EW_RED, HIGH);
+  }
+
+
+  // ---------------------------------------------------
+  // SOUTH EMERGENCY
+  // ---------------------------------------------------
+
+  else if (direction == 2)
+  {
+    Serial.println("EMERGENCY FROM SOUTH");
+
+    digitalWrite(NS_GREEN, HIGH);
+    digitalWrite(EW_RED, HIGH);
+  }
+
+
+  // ---------------------------------------------------
+  // EAST EMERGENCY
+  // ---------------------------------------------------
+
+  else if (direction == 3)
+  {
+    Serial.println("EMERGENCY FROM EAST");
+
+    digitalWrite(NS_RED, HIGH);
+    digitalWrite(EW_GREEN, HIGH);
+  }
+
+
+  // ---------------------------------------------------
+  // WEST EMERGENCY
+  // ---------------------------------------------------
+
+  else if (direction == 4)
+  {
+    Serial.println("EMERGENCY FROM WEST");
+
+    digitalWrite(NS_RED, HIGH);
+    digitalWrite(EW_GREEN, HIGH);
+  }
+
+
+  Serial.println("Emergency light state activated.");
+  Serial.println("Priority duration: 5 seconds");
+
+
+  // ---------------------------------------------------
+  // EXACTLY 5 SECONDS
+  // ---------------------------------------------------
+
+  unsigned long start = millis();
+
+
+  while (millis() - start < EMERGENCY_TIME)
+  {
+    delay(5);
+  }
+
+
+  Serial.println("Emergency priority completed.");
+}
+
+
+// =====================================================
+// PRINT EMERGENCY DIRECTION
+// =====================================================
+
+void printEmergency(int direction)
+{
+  if (direction == 1)
+  {
+    Serial.println("Direction: NORTH");
+  }
+
+  else if (direction == 2)
+  {
+    Serial.println("Direction: SOUTH");
+  }
+
+  else if (direction == 3)
+  {
+    Serial.println("Direction: EAST");
+  }
+
+  else if (direction == 4)
+  {
+    Serial.println("Direction: WEST");
+  }
+}
+
+
+// =====================================================
+// CHECK WHETHER NS IS RED
+// =====================================================
+
+bool nsIsRed(Phase phase)
+{
+  return (
+    phase == EW_GREEN_PHASE ||
+    phase == EW_YELLOW_PHASE
+  );
+}
+
+
+// =====================================================
+// CHECK WHETHER EW IS RED
+// =====================================================
+
+bool ewIsRed(Phase phase)
+{
+  return (
+    phase == NS_GREEN_PHASE ||
+    phase == NS_YELLOW_PHASE
+  );
+}
+
+
+// =====================================================
+// IR VIOLATION DETECTION
+// =====================================================
+
+void checkIR(Phase phase)
+{
+  bool nsRed = nsIsRed(phase);
+  bool ewRed = ewIsRed(phase);
+
+
+  // ---------------------------------------------------
+  // NORTH
+  // ---------------------------------------------------
+
+  if (nsRed && digitalRead(IR_NORTH) == LOW)
+  {
+    Serial.println(
+      "VIOLATION: NORTH vehicle detected on RED."
+    );
+  }
+
+
+  // ---------------------------------------------------
+  // SOUTH
+  // ---------------------------------------------------
+
+  if (nsRed && digitalRead(IR_SOUTH) == LOW)
+  {
+    Serial.println(
+      "VIOLATION: SOUTH vehicle detected on RED."
+    );
+  }
+
+
+  // ---------------------------------------------------
+  // EAST
+  // ---------------------------------------------------
+
+  if (ewRed && digitalRead(IR_EAST) == LOW)
+  {
+    Serial.println(
+      "VIOLATION: EAST vehicle detected on RED."
+    );
+  }
+
+
+  // ---------------------------------------------------
+  // WEST
+  // ---------------------------------------------------
+
+  if (ewRed && digitalRead(IR_WEST) == LOW)
+  {
+    Serial.println(
+      "VIOLATION: WEST vehicle detected on RED."
+    );
+  }
+}
+
+
+// =====================================================
+// START THREE BEEPS
+// =====================================================
+
+void startThreeBeep(int pin)
+{
+  if (pin == BUZZER_NS)
+  {
+    nsBeep.active = true;
+    nsBeep.state = true;
+    nsBeep.count = 0;
+    nsBeep.lastTime = millis();
+
+    digitalWrite(BUZZER_NS, HIGH);
+  }
+
+
+  else if (pin == BUZZER_EW)
+  {
+    ewBeep.active = true;
+    ewBeep.state = true;
+    ewBeep.count = 0;
+    ewBeep.lastTime = millis();
+
+    digitalWrite(BUZZER_EW, HIGH);
+  }
+}
+
+
+// =====================================================
+// UPDATE BUZZERS
+// =====================================================
+
+void updateBuzzers()
+{
+  updateOneBeep(
+    &nsBeep,
+    BUZZER_NS
+  );
+
+  updateOneBeep(
+    &ewBeep,
+    BUZZER_EW
+  );
+}
+
+
+// =====================================================
+// UPDATE ONE BUZZER
+// =====================================================
+
+void updateOneBeep(
+  BeepState *beep,
+  int pin
+)
+{
+  if (!beep->active)
+  {
+    return;
+  }
+
+
+  unsigned long now = millis();
+
+
+  // ---------------------------------------------------
+  // BUZZER ON
+  // ---------------------------------------------------
+
+  if (beep->state)
+  {
+    if (now - beep->lastTime >= 200)
+    {
+      digitalWrite(pin, LOW);
+
+      beep->state = false;
+      beep->lastTime = now;
+    }
+  }
+
+
+  // ---------------------------------------------------
+  // BUZZER OFF
+  // ---------------------------------------------------
+
+  else
+  {
+    if (now - beep->lastTime >= 200)
+    {
+      beep->count++;
+
+
+      if (beep->count >= 3)
+      {
+        beep->active = false;
+        beep->state = false;
+
+        digitalWrite(pin, LOW);
+
+        return;
+      }
+
+
+      digitalWrite(pin, HIGH);
+
+      beep->state = true;
+      beep->lastTime = now;
+    }
+  }
+}
+
+
+// =====================================================
+// STOP BUZZERS
+// =====================================================
+
+void stopBuzzers()
+{
+  nsBeep.active = false;
+  nsBeep.state = false;
+  nsBeep.count = 0;
+
+  ewBeep.active = false;
+  ewBeep.state = false;
+  ewBeep.count = 0;
+
+  digitalWrite(BUZZER_NS, LOW);
+  digitalWrite(BUZZER_EW, LOW);
+}
+</script>
+
 <!-- Smart Grocery Shelves Source Code -->
 <script type="text/plain" id="shelves-code">
-/*
-    Insert your Smart Grocery Shelves
-    ESP32 source code here.
-*/
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <SPI.h>
+#include <MFRC522.h>
+#include <ArduinoJson.h>
+#include <Preferences.h>
+
+// =====================================================
+// WI-FI & CENTRAL FIREBASE DASHBOARD SETTINGS
+// =====================================================
+const char* ssid = "PLM_WIFI_2.4";      // [FIX 1] same Wi-Fi on all boards
+const char* password = "PLMh@ribon";
+const String FIREBASE_BASE = "https://smart-supermarket-iot-default-rtdb.asia-southeast1.firebasedatabase.app";
+
+// =====================================================
+// SMART GROCERY SHELF
+// 9 RC522 RFID READERS + ESP32
+// OPTION A: SAME PRODUCT TYPE PER BRAND SECTION
+// =====================================================
+
+// ---------------- PIN CONFIGURATION ----------------
+
+#define SPI_SCK   18
+#define SPI_MISO  19
+#define SPI_MOSI  23
+#define RFID_RST  22
+
+const byte READER_COUNT = 3;
+#define MAX_PRODUCTS 12
+
+const byte CS_PINS[READER_COUNT] = {
+  5, 17, 16
+};
+
+// ---------------- SCANNING SETTINGS ----------------
+
+#define SERIAL_BAUD          115200
+#define SCAN_INTERVAL_MS     20
+#define REMOVAL_THRESHOLD    12
+#define MAX_LINE_LENGTH      1024
+
+// ---------------- SLOT CONFIGURATION ----------------
+
+const char* SLOT_IDS[READER_COUNT] = {
+  "MAGNOLIA_1",
+  "MAGNOLIA_2",
+  "MAGNOLIA_3"
+};
+
+const char* SLOT_BRANDS[READER_COUNT] = {
+  "Magnolia",
+  "Magnolia",
+  "Magnolia"
+};
+
+// ---------------- [NEW] TEST PRODUCTS (fill in your tag UIDs) ----------------
+// uid "" = AUTO-LEARN (recommended). You may still paste a UID like "A1 B2 C3 D4".
+const bool AUTO_LEARN = true;
+struct TestTag { const char* slotId; const char* uid; const char* productId; const char* name; const char* category; float price; };
+const TestTag TEST_TAGS[] = {
+  {"MAGNOLIA_1", "", "MILK01",   "Magnolia Fresh Milk 1L", "Dairy",   98.0},
+  {"MAGNOLIA_2", "", "MILK01",   "Magnolia Fresh Milk 1L", "Dairy",   98.0},
+  {"MAGNOLIA_3", "", "MILK01",   "Magnolia Fresh Milk 1L", "Dairy",   98.0},
+};
+const int TEST_TAG_COUNT = sizeof(TEST_TAGS) / sizeof(TEST_TAGS[0]);
+
+// ---------------- RFID READERS ----------------
+
+// RST is pulsed manually once in initializeReaders() -> UNUSED_PIN here
+MFRC522 readers[READER_COUNT] = {
+  MFRC522(CS_PINS[0], MFRC522::UNUSED_PIN),
+  MFRC522(CS_PINS[1], MFRC522::UNUSED_PIN),
+  MFRC522(CS_PINS[2], MFRC522::UNUSED_PIN)
+};
+
+// =====================================================
+// PRODUCT REGISTRY
+// =====================================================
+
+struct Product {
+  String uid;
+  String productId;
+  String productName;
+  String brand;
+  String category;
+  float unitPrice;
+  int quantity;
+  bool registered;
+};
+
+Product products[MAX_PRODUCTS];
+
+// =====================================================
+// SHELF SLOT STATES
+// =====================================================
+
+bool readerOnline[READER_COUNT] = {false};
+bool slotPresent[READER_COUNT] = {false};
+String currentUID[READER_COUNT];
+byte missingCount[READER_COUNT] = {0};
+
+Preferences preferences;
+String serialBuffer = "";
+unsigned long lastScanTime = 0;
+
+// Forward declarations
+void syncSlotToFirebase(int slotIndex, const char* eventName, String uid, const char* status);
+bool autoLearnTag(int slotIndex, String uid);
+
+// =====================================================
+// UID UTILITIES
+// =====================================================
+
+String normalizeUID(String uid) {
+  uid.trim();
+  uid.toUpperCase();
+  uid.replace(":", " ");
+  uid.replace("-", " ");
+
+  String result = "";
+  bool previousSpace = true;
+
+  for (unsigned int i = 0; i < uid.length(); i++) {
+    char c = uid[i];
+    if (c == ' ') {
+      if (!previousSpace) {
+        result += ' ';
+        previousSpace = true;
+      }
+    } else {
+      result += c;
+      previousSpace = false;
+    }
+  }
+  result.trim();
+  return result;
+}
+
+String getUIDString(MFRC522::Uid* uid) {
+  String result = "";
+  for (byte i = 0; i < uid->size; i++) {
+    if (uid->uidByte[i] < 0x10) {
+      result += "0";
+    }
+    result += String(uid->uidByte[i], HEX);
+    if (i < uid->size - 1) {
+      result += " ";
+    }
+  }
+  result.toUpperCase();
+  return result;
+}
+
+// =====================================================
+// PRODUCT REGISTRY UTILITIES
+// =====================================================
+
+void clearProduct(int index) {
+  products[index].uid = "";
+  products[index].productId = "";
+  products[index].productName = "";
+  products[index].brand = "";
+  products[index].category = "";
+  products[index].unitPrice = 0.0;
+  products[index].quantity = 0;
+  products[index].registered = false;
+}
+
+int findProductByUID(String uid) {
+  uid = normalizeUID(uid);
+  for (int i = 0; i < MAX_PRODUCTS; i++) {
+    if (products[i].registered && normalizeUID(products[i].uid) == uid) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+int findFreeProductIndex() {
+  for (int i = 0; i < MAX_PRODUCTS; i++) {
+    if (!products[i].registered) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+// =====================================================
+// PRODUCT STORAGE
+// =====================================================
+
+void saveProduct(int index) {
+  String key = "p" + String(index);
+  JsonDocument doc;
+  doc["uid"] = products[index].uid;
+  doc["product_id"] = products[index].productId;
+  doc["product_name"] = products[index].productName;
+  doc["brand"] = products[index].brand;
+  doc["category"] = products[index].category;
+  doc["unit_price"] = products[index].unitPrice;
+  doc["quantity"] = products[index].quantity;
+  doc["registered"] = products[index].registered;
+
+  String json;
+  serializeJson(doc, json);
+  preferences.putString(key.c_str(), json);
+}
+
+void loadProducts() {
+  for (int i = 0; i < MAX_PRODUCTS; i++) {
+    clearProduct(i);
+    String key = "p" + String(i);
+    if (!preferences.isKey(key.c_str())) continue;
+
+    String json = preferences.getString(key.c_str(), "");
+    JsonDocument doc;
+    if (deserializeJson(doc, json)) continue;
+
+    products[i].uid = normalizeUID(doc["uid"] | "");
+    products[i].productId = doc["product_id"] | "";
+    products[i].productName = doc["product_name"] | "";
+    products[i].brand = doc["brand"] | "";
+    products[i].category = doc["category"] | "";
+    products[i].unitPrice = doc["unit_price"] | 0.0;
+    products[i].quantity = doc["quantity"] | 1;
+    products[i].registered = doc["registered"] | false;
+  }
+}
+
+// =====================================================
+// BRAND AND SLOT VALIDATION
+// =====================================================
+
+bool brandMatchesSlot(String brand, int slotIndex) {
+  return brand.equalsIgnoreCase(SLOT_BRANDS[slotIndex]);
+}
+
+bool sameBrandProductType(
+  String brand,
+  String productId,
+  String productName,
+  String category,
+  float price,
+  int excludedIndex
+) {
+  for (int i = 0; i < MAX_PRODUCTS; i++) {
+    if (i == excludedIndex || !products[i].registered) continue;
+    if (!products[i].brand.equalsIgnoreCase(brand)) continue;
+    if (
+      products[i].productId != productId ||
+      products[i].productName != productName ||
+      products[i].category != category ||
+      fabs(products[i].unitPrice - price) > 0.001
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// =====================================================
+// FIREBASE CLOUD SYNC HELPER
+// =====================================================
+
+void syncSlotToFirebase(int slotIndex, const char* eventName, String uid, const char* status) {
+  if (WiFi.status() != WL_CONNECTED) { Serial.println("[Firebase] skipped - no WiFi"); return; }
+
+  HTTPClient http;
+  String url = FIREBASE_BASE + "/shelves/" + String(SLOT_IDS[slotIndex]) + ".json";
+  http.begin(url);
+  http.addHeader("Content-Type", "application/json");
+
+  int productIndex = findProductByUID(uid);
+  String prodId = (productIndex >= 0) ? products[productIndex].productId : "UNREGISTERED";
+  String prodName = (productIndex >= 0) ? products[productIndex].productName : (String(status) == "EMPTY" || String(status) == "REMOVED" ? "Empty Slot" : "Unknown Tag (" + uid + ")");
+  String prodBrand = (productIndex >= 0) ? products[productIndex].brand : String(SLOT_BRANDS[slotIndex]);
+  String prodCat = (productIndex >= 0) ? products[productIndex].category : "General";
+  float prodPrice = (productIndex >= 0) ? products[productIndex].unitPrice : 0.0;
+  int prodQty = (slotPresent[slotIndex]) ? ((productIndex >= 0) ? products[productIndex].quantity : 1) : 0;
+
+  JsonDocument fbDoc;
+  fbDoc["slot_id"] = SLOT_IDS[slotIndex];
+  fbDoc["reader_id"] = "RC522_" + String(slotIndex + 1);
+  fbDoc["allowed_brand"] = SLOT_BRANDS[slotIndex];
+  fbDoc["reader_online"] = readerOnline[slotIndex];
+  fbDoc["event"] = eventName;
+  fbDoc["uid"] = uid;
+  fbDoc["status"] = status;
+  fbDoc["product_id"] = prodId;
+  fbDoc["product_name"] = prodName;
+  fbDoc["brand"] = prodBrand;
+  fbDoc["category"] = prodCat;
+  fbDoc["unit_price"] = prodPrice;
+  fbDoc["quantity"] = prodQty;
+
+  String payload;
+  serializeJson(fbDoc, payload);
+  int rc = http.PATCH(payload);
+  http.end();
+  Serial.printf("[Firebase] %s -> %s (%s) | HTTP %d %s\n", SLOT_IDS[slotIndex], status, prodName.c_str(), rc,
+                rc == 200 ? "OK" : rc == 401 ? "<< RULES NOT OPEN" : rc < 0 ? "<< NO INTERNET / WIFI" : "<< ERROR");
+}
+
+// =====================================================
+// EVENT OUTPUT
+// =====================================================
+
+void emitEvent(
+  const char* eventName,
+  int slotIndex,
+  String uid,
+  const char* status,
+  String previousUID = ""
+) {
+  JsonDocument doc;
+  doc["source"] = "SMART_GROCERY_SHELF";
+  doc["event"] = eventName;
+  doc["slot_id"] = SLOT_IDS[slotIndex];
+  doc["reader_id"] = "RC522_" + String(slotIndex + 1);
+  doc["uid"] = uid;
+  doc["status"] = status;
+
+  if (previousUID.length() > 0) {
+    doc["previous_uid"] = previousUID;
+  }
+
+  int productIndex = findProductByUID(uid);
+  if (productIndex >= 0) {
+    JsonObject product = doc["product"].to<JsonObject>();
+    product["product_id"] = products[productIndex].productId;
+    product["product_name"] = products[productIndex].productName;
+    product["brand"] = products[productIndex].brand;
+    product["category"] = products[productIndex].category;
+    product["unit_price"] = products[productIndex].unitPrice;
+    product["quantity"] = products[productIndex].quantity;
+  } else {
+    doc["product"] = nullptr;
+  }
+
+  serializeJson(doc, Serial);
+  Serial.println();
+
+  // Push real-time update to Central Firebase Dashboard
+  syncSlotToFirebase(slotIndex, eventName, uid, status);
+}
+
+void emitReaderStatus(int index) {
+  JsonDocument doc;
+  doc["source"] = "SMART_GROCERY_SHELF";
+  doc["event"] = "READER_STATUS";
+  doc["slot_id"] = SLOT_IDS[index];
+  doc["reader_id"] = "RC522_" + String(index + 1);
+  doc["allowed_brand"] = SLOT_BRANDS[index];
+  doc["status"] = readerOnline[index] ? "ONLINE" : "OFFLINE";
+
+  serializeJson(doc, Serial);
+  Serial.println();
+}
+
+// =====================================================
+// READER INITIALIZATION
+// =====================================================
+
+void initOneReader(int i) {
+  for (int j = 0; j < READER_COUNT; j++) digitalWrite(CS_PINS[j], HIGH);
+  readers[i].PCD_Init();                                   // soft reset only
+  delay(10);
+  readers[i].PCD_SetAntennaGain(MFRC522::RxGain_max);      // key fobs need max gain
+  readers[i].PCD_AntennaOn();
+  byte version = readers[i].PCD_ReadRegister(MFRC522::VersionReg);
+  readerOnline[i] = (version != 0x00 && version != 0xFF);
+}
+
+void initializeReaders() {
+  for (int i = 0; i < READER_COUNT; i++) {
+    pinMode(CS_PINS[i], OUTPUT);
+    digitalWrite(CS_PINS[i], HIGH);
+  }
+
+  // Hard-reset ALL readers ONCE through the shared RST line
+  pinMode(RFID_RST, OUTPUT);
+  digitalWrite(RFID_RST, LOW);  delay(50);
+  digitalWrite(RFID_RST, HIGH); delay(100);
+
+  SPI.begin(SPI_SCK, SPI_MISO, SPI_MOSI, -1);
+
+  for (int i = 0; i < READER_COUNT; i++) {
+    initOneReader(i);
+  }
+
+  for (int i = 0; i < READER_COUNT; i++) {
+    emitReaderStatus(i);
+  }
+
+  JsonDocument doc;
+  doc["source"] = "SMART_GROCERY_SHELF";
+  doc["event"] = "SHELF_READY";
+  doc["reader_count"] = READER_COUNT;
+  doc["registration_mode"] = "UID_BASED";
+  doc["shelf_mode"] = "BRAND_GROUPED";
+
+  serializeJson(doc, Serial);
+  Serial.println();
+}
+
+// =====================================================
+// PRODUCT REGISTRATION
+// =====================================================
+
+void registerProduct(JsonDocument &doc) {
+  String slotID = doc["slot_id"] | "";
+  String uid = normalizeUID(doc["uid"] | "");
+  String productID = doc["product_id"] | "";
+  String productName = doc["product_name"] | "";
+  String category = doc["category"] | "";
+
+  int slotIndex = -1;
+  for (int i = 0; i < READER_COUNT; i++) {
+    if (slotID.equalsIgnoreCase(SLOT_IDS[i])) {
+      slotIndex = i;
+      break;
+    }
+  }
+
+  if (slotIndex < 0 || uid.length() == 0 || productID.length() == 0 || productName.length() == 0) {
+    Serial.println("{\"source\":\"SMART_GROCERY_SHELF\",\"event\":\"REGISTRATION_FAILED\",\"reason\":\"INVALID_REGISTRATION_DATA\"}");
+    return;
+  }
+
+  String brand = SLOT_BRANDS[slotIndex];
+
+  if (!doc["unit_price"].is<float>() && !doc["unit_price"].is<int>() && !doc["unit_price"].is<long>() && !doc["unit_price"].is<double>()) {
+    Serial.println("{\"source\":\"SMART_GROCERY_SHELF\",\"event\":\"REGISTRATION_FAILED\",\"reason\":\"INVALID_UNIT_PRICE\"}");
+    return;
+  }
+
+  if (!doc["quantity"].is<int>()) {
+    Serial.println("{\"source\":\"SMART_GROCERY_SHELF\",\"event\":\"REGISTRATION_FAILED\",\"reason\":\"INVALID_QUANTITY\"}");
+    return;
+  }
+
+  float price = doc["unit_price"].as<float>();
+  int quantity = doc["quantity"].as<int>();
+
+  if (price < 0 || quantity < 1) {
+    Serial.println("{\"source\":\"SMART_GROCERY_SHELF\",\"event\":\"REGISTRATION_FAILED\",\"reason\":\"INVALID_PRICE_OR_QUANTITY\"}");
+    return;
+  }
+
+  String requestedBrand = doc["brand"] | brand;
+  if (!brandMatchesSlot(requestedBrand, slotIndex)) {
+    Serial.println("{\"source\":\"SMART_GROCERY_SHELF\",\"event\":\"REGISTRATION_FAILED\",\"reason\":\"BRAND_SLOT_MISMATCH\"}");
+    return;
+  }
+
+  int productIndex = findProductByUID(uid);
+  bool updating = (productIndex >= 0);
+
+  if (!updating) {
+    productIndex = findFreeProductIndex();
+    if (productIndex < 0) {
+      Serial.println("{\"source\":\"SMART_GROCERY_SHELF\",\"event\":\"REGISTRATION_FAILED\",\"reason\":\"PRODUCT_REGISTRY_FULL\"}");
+      return;
+    }
+  }
+
+  if (updating && !products[productIndex].brand.equalsIgnoreCase(brand)) {
+    Serial.println("{\"source\":\"SMART_GROCERY_SHELF\",\"event\":\"REGISTRATION_FAILED\",\"reason\":\"UID_BRAND_CONFLICT\"}");
+    return;
+  }
+
+  if (!sameBrandProductType(brand, productID, productName, category, price, productIndex)) {
+    Serial.println("{\"source\":\"SMART_GROCERY_SHELF\",\"event\":\"REGISTRATION_FAILED\",\"reason\":\"PRODUCT_TYPE_MISMATCH\",\"message\":\"All products in this brand section must use the same product information.\"}");
+    return;
+  }
+
+  products[productIndex].uid = uid;
+  products[productIndex].productId = productID;
+  products[productIndex].productName = productName;
+  products[productIndex].brand = brand;
+  products[productIndex].category = category;
+  products[productIndex].unitPrice = price;
+  products[productIndex].quantity = quantity;
+  products[productIndex].registered = true;
+
+  saveProduct(productIndex);
+
+  JsonDocument response;
+  response["source"] = "SMART_GROCERY_SHELF";
+  response["event"] = "PRODUCT_REGISTERED";
+  response["uid"] = uid;
+  response["product_id"] = productID;
+  response["brand"] = brand;
+  response["product_name"] = productName;
+  String allowed = "";                                   // [FIX 2]
+  for (int i = 0; i < READER_COUNT; i++) {
+    if (brand.equalsIgnoreCase(SLOT_BRANDS[i])) { if (allowed.length()) allowed += ","; allowed += SLOT_IDS[i]; }
+  }
+  response["allowed_slots"] = allowed;
+  response["registration_type"] = "UID_BASED";
+  response["status"] = "SUCCESS";
+
+  serializeJson(response, Serial);
+  Serial.println();
+
+  for (int i = 0; i < READER_COUNT; i++) {
+    if (slotPresent[i] && normalizeUID(currentUID[i]) == uid) {
+      if (brandMatchesSlot(brand, i)) {
+        emitEvent("SLOT_PRESENT", i, uid, "AVAILABLE");
+      } else {
+        emitEvent("BRAND_MISMATCH", i, uid, "WRONG_BRAND_SECTION");
+      }
+    }
+  }
+}
+
+// =====================================================
+// REMOVE PRODUCT REGISTRATION
+// =====================================================
+
+void removeRegistration(JsonDocument &doc) {
+  String uid = normalizeUID(doc["uid"] | "");
+  int productIndex = findProductByUID(uid);
+
+  if (productIndex < 0) {
+    Serial.println("{\"source\":\"SMART_GROCERY_SHELF\",\"event\":\"REGISTRATION_FAILED\",\"reason\":\"UID_NOT_FOUND\"}");
+    return;
+  }
+
+  clearProduct(productIndex);
+  saveProduct(productIndex);
+
+  JsonDocument response;
+  response["source"] = "SMART_GROCERY_SHELF";
+  response["event"] = "REGISTRATION_REMOVED";
+  response["uid"] = uid;
+  response["status"] = "SUCCESS";
+
+  serializeJson(response, Serial);
+  Serial.println();
+}
+
+// =====================================================
+// SHELF STATUS
+// =====================================================
+
+void sendShelfStatus() {
+  for (int i = 0; i < READER_COUNT; i++) {
+    if (slotPresent[i]) {
+      int productIndex = findProductByUID(currentUID[i]);
+      if (productIndex < 0) {
+        emitEvent("SLOT_STATUS", i, currentUID[i], "UNREGISTERED");
+      } else if (!brandMatchesSlot(products[productIndex].brand, i)) {
+        emitEvent("BRAND_MISMATCH", i, currentUID[i], "WRONG_BRAND_SECTION");
+      } else {
+        emitEvent("SLOT_STATUS", i, currentUID[i], "PRESENT");
+      }
+    } else {
+      emitEvent("SLOT_STATUS", i, "", "EMPTY");
+    }
+  }
+}
+
+// =====================================================
+// SERIAL COMMAND PROCESSING
+// =====================================================
+
+void processCommand(String message) {
+  JsonDocument doc;
+  DeserializationError error = deserializeJson(doc, message);
+
+  if (error) {
+    Serial.println("{\"source\":\"SMART_GROCERY_SHELF\",\"event\":\"COMMAND_ERROR\",\"reason\":\"INVALID_JSON\"}");
+    return;
+  }
+
+  String command = doc["command"] | "";
+  if (command == "REGISTER_PRODUCT") {
+    registerProduct(doc);
+  } else if (command == "REMOVE_REGISTRATION") {
+    removeRegistration(doc);
+  } else if (command == "GET_STATUS") {
+    sendShelfStatus();
+  } else if (command == "PING") {
+    Serial.println("{\"source\":\"SMART_GROCERY_SHELF\",\"event\":\"PONG\",\"status\":\"ONLINE\"}");
+  } else {
+    Serial.println("{\"source\":\"SMART_GROCERY_SHELF\",\"event\":\"COMMAND_ERROR\",\"reason\":\"UNKNOWN_COMMAND\"}");
+  }
+}
+
+void readSerialCommands() {
+  while (Serial.available()) {
+    char incoming = Serial.read();
+    if (incoming == '\n') {
+      serialBuffer.trim();
+      if (serialBuffer.length() > 0) {
+        processCommand(serialBuffer);
+      }
+      serialBuffer = "";
+    } else if (incoming != '\r') {
+      if (serialBuffer.length() < MAX_LINE_LENGTH) {
+        serialBuffer += incoming;
+      } else {
+        serialBuffer = "";
+      }
+    }
+  }
+}
+
+// =====================================================
+// RFID SCANNING
+// =====================================================
+
+void scanReader(int index) {
+  if (!readerOnline[index]) return;
+
+  for (int i = 0; i < READER_COUNT; i++) {
+    digitalWrite(CS_PINS[i], HIGH);
+  }
+
+  bool tagDetected = false;
+  byte atqa[2];
+  byte atqaSize = sizeof(atqa);
+
+  MFRC522::StatusCode result = readers[index].PICC_WakeupA(atqa, &atqaSize);
+  if (result != MFRC522::STATUS_OK && result != MFRC522::STATUS_COLLISION) {
+    atqaSize = sizeof(atqa);
+    result = readers[index].PICC_RequestA(atqa, &atqaSize);    // second try
+  }
+
+  if (result == MFRC522::STATUS_OK || result == MFRC522::STATUS_COLLISION) {
+    result = readers[index].PICC_Select(&readers[index].uid);
+
+    if (result == MFRC522::STATUS_OK) {
+      tagDetected = true;
+      String uid = getUIDString(&readers[index].uid);
+      missingCount[index] = 0;
+
+      if (!slotPresent[index]) {
+        slotPresent[index] = true;
+        currentUID[index] = uid;
+        int productIndex = findProductByUID(uid);
+
+        if (productIndex < 0 && autoLearnTag(index, uid)) {
+          // learned + SLOT_PRESENT already sent by registerProduct()
+        } else if (productIndex < 0) {
+          emitEvent("UNKNOWN_TAG", index, uid, "UNREGISTERED");
+        } else if (!brandMatchesSlot(products[productIndex].brand, index)) {
+          emitEvent("BRAND_MISMATCH", index, uid, "WRONG_BRAND_SECTION");
+        } else {
+          emitEvent("SLOT_PRESENT", index, uid, "AVAILABLE");
+        }
+      } else if (normalizeUID(currentUID[index]) != uid) {
+        String previousUID = currentUID[index];
+        currentUID[index] = uid;
+        int productIndex = findProductByUID(uid);
+
+        if (productIndex < 0 && autoLearnTag(index, uid)) {
+          // learned
+        } else if (productIndex < 0) {
+          emitEvent("SLOT_REPLACED", index, uid, "UNREGISTERED", previousUID);
+        } else if (!brandMatchesSlot(products[productIndex].brand, index)) {
+          emitEvent("BRAND_MISMATCH", index, uid, "WRONG_BRAND_SECTION", previousUID);
+        } else {
+          emitEvent("SLOT_REPLACED", index, uid, "AVAILABLE", previousUID);
+        }
+      }
+
+      readers[index].PICC_HaltA();
+      readers[index].PCD_StopCrypto1();
+    }
+  }
+
+  if (!tagDetected && slotPresent[index]) {
+    if (missingCount[index] < REMOVAL_THRESHOLD) {
+      missingCount[index]++;
+    }
+
+    if (missingCount[index] >= REMOVAL_THRESHOLD) {
+      String removedUID = currentUID[index];
+      slotPresent[index] = false;
+      currentUID[index] = "";
+      missingCount[index] = 0;
+      emitEvent("SLOT_REMOVED", index, removedUID, "REMOVED");
+    }
+  }
+
+}
+
+// Auto-recovery: re-init any reader that stopped answering (every 5 s)
+unsigned long lastHealthCheck = 0;
+void readerHealthCheck() {
+  if (millis() - lastHealthCheck < 5000) return;
+  lastHealthCheck = millis();
+  for (int i = 0; i < READER_COUNT; i++) {
+    for (int j = 0; j < READER_COUNT; j++) digitalWrite(CS_PINS[j], HIGH);
+    byte v = readers[i].PCD_ReadRegister(MFRC522::VersionReg);
+    if (v == 0x00 || v == 0xFF || !readerOnline[i]) {
+      bool was = readerOnline[i];
+      initOneReader(i);
+      if (readerOnline[i] != was) emitReaderStatus(i);
+    }
+  }
+}
+
+// =====================================================
+// [NEW] AUTO-REGISTER TEST TAGS ON BOOT
+// =====================================================
+
+// Auto-learn: register an unknown tag using the test product of the reader it sits on
+bool autoLearnTag(int slotIndex, String uid) {
+  if (!AUTO_LEARN) return false;
+  for (int t = 0; t < TEST_TAG_COUNT; t++) {
+    if (!String(TEST_TAGS[t].slotId).equalsIgnoreCase(SLOT_IDS[slotIndex])) continue;
+    JsonDocument doc;
+    doc["slot_id"] = SLOT_IDS[slotIndex];
+    doc["uid"] = uid;
+    doc["product_id"] = TEST_TAGS[t].productId;
+    doc["product_name"] = TEST_TAGS[t].name;
+    doc["category"] = TEST_TAGS[t].category;
+    doc["unit_price"] = TEST_TAGS[t].price;
+    doc["quantity"] = 1;
+    registerProduct(doc);
+    return findProductByUID(uid) >= 0;
+  }
+  return false;
+}
+
+void registerTestTags() {
+  for (int t = 0; t < TEST_TAG_COUNT; t++) {
+    if (strlen(TEST_TAGS[t].uid) == 0) continue;
+    JsonDocument doc;
+    doc["command"] = "REGISTER_PRODUCT";
+    doc["slot_id"] = TEST_TAGS[t].slotId;
+    doc["uid"] = TEST_TAGS[t].uid;
+    doc["product_id"] = TEST_TAGS[t].productId;
+    doc["product_name"] = TEST_TAGS[t].name;
+    doc["category"] = TEST_TAGS[t].category;
+    doc["unit_price"] = TEST_TAGS[t].price;
+    doc["quantity"] = 1;
+    registerProduct(doc);
+  }
+}
+
+// =====================================================
+// SETUP
+// =====================================================
+
+void setup() {
+  Serial.begin(SERIAL_BAUD);
+  delay(1000);
+
+  preferences.begin("milkShelf3", false);   // fresh registry for the 3-reader milk shelf
+  loadProducts();
+  registerTestTags();
+  initializeReaders();
+
+  // Connect to Wi-Fi for Central Dashboard Sync
+  WiFi.begin(ssid, password);
+  unsigned long wifiStart = millis();
+  while (WiFi.status() != WL_CONNECTED && millis() - wifiStart < 10000) {
+    delay(500);
+  }
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("[WiFi] CONNECTED  IP: " + WiFi.localIP().toString());
+  } else {
+    Serial.println("[WiFi] FAILED - check ssid/password (must be 2.4 GHz). Firebase sync OFF.");
+  }
+  sendShelfStatus();   // push initial state of all slots to Firebase
+}
+
+unsigned long lastWifiCheck = 0;
+
+// =====================================================
+// MAIN LOOP
+// =====================================================
+
+void loop() {
+  readSerialCommands();
+
+  if (WiFi.status() != WL_CONNECTED && millis() - lastWifiCheck > 10000) {   // [FIX 3]
+    lastWifiCheck = millis();
+    WiFi.reconnect();
+  }
+
+  readerHealthCheck();
+
+  if (millis() - lastScanTime >= SCAN_INTERVAL_MS) {
+    lastScanTime = millis();
+    for (int i = 0; i < READER_COUNT; i++) {
+      scanReader(i);
+      readSerialCommands();
+    }
+  }
+}
 </script>
     
 <!-- Code Viewer Modal -->
