@@ -970,7 +970,7 @@ h1 .accent {
 ========================= */
 
 .view-code-btn {
-    color: var(--text);
+    color: var(--bg);
     cursor: pointer;
 }
 
