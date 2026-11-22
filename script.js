@@ -65,7 +65,7 @@ function displayCode(codeId) {
 // PROJECT BUTTONS
 // =========================
 
-document.querySelectorAll('.view-code-btn').forEach(button => {
+document.querySelectorAll('.btn btn-outline view-code-btn').forEach(button => {
 
     button.addEventListener('click', () => {
 
