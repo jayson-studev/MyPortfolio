@@ -208,10 +208,11 @@ h1 .accent {
 .btn-outline {
     border: 1px solid var(--border);
     background: transparent;
+    background-color: var(--blue2);
 }
 
 .btn-outline:hover {
-    border-color: var(--blue);
+    border-color: var(--blue2);
 }
 
 .hero-meta {
@@ -971,7 +972,6 @@ h1 .accent {
 .view-code-btn {
     color: var(--text);
     cursor: pointer;
-    background-color: var(--blue2);
 }
 
 .view-code-btn span {
