@@ -907,3 +907,59 @@ h1 .accent {
         padding: 14px;
     }
 }
+
+/* =========================
+   CODE VIEWER TABS
+========================= */
+
+.code-tabs {
+    display: none;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.code-tabs.active {
+    display: flex;
+}
+
+.code-tab {
+    padding: 10px 16px;
+
+    background: var(--panel2);
+    color: var(--muted);
+
+    border: 1px solid var(--border);
+    border-radius: 8px;
+
+    font-family: inherit;
+    font-size: 0.85rem;
+
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.code-tab:hover {
+    color: var(--text);
+    border-color: var(--blue);
+}
+
+.code-tab.active {
+    color: var(--text);
+    background: rgba(91, 156, 255, 0.12);
+    border-color: var(--blue);
+}
+
+/* Mobile */
+
+@media (max-width: 600px) {
+    .code-tabs {
+        gap: 6px;
+    }
+
+    .code-tab {
+        flex: 1;
+        padding: 9px 10px;
+        font-size: 0.75rem;
+    }
+}
